@@ -1,0 +1,15 @@
+{
+	"BundleType": "Application",
+	"AppIcon": {
+		"18x18": "frog-icon.png"
+	},
+	"AppName": {
+		"en": "Boil the frog"
+	},
+	"SupportedLanguages": [
+		"en"
+	],
+	"RequiredPermissions": [
+		"http://*.echonest.com"
+	]
+}

@@ -1,0 +1,98 @@
+body {
+    margin-left:20px;
+}
+
+.clear {
+	clear:both;
+}
+
+h1 {
+    font-size:24px;
+    margin: 30px;
+}
+
+.left {
+	float:left;
+}
+
+.inp {
+    border-radius: 14px;
+    -webkit-border-radius:14px;
+    padding-left:14px;
+    padding-right:14px;
+}
+
+button {
+    -webkit-border-radius:4px;
+}
+
+#info {
+    margin-top:10px;
+    margin-left: 20px;
+    font-size:24px;
+}
+
+#artists {
+    margin:20px;
+    font-size:24px;
+}
+
+#psearch {
+    margin-left:280px;
+}
+
+#search {
+    margin-top:30px;
+}
+
+#player-image {
+	margin-right: 10px;
+	margin-bottom: 10px;
+}
+#player-image, #player-image .image {
+	float:left;
+	height:128px;
+	width:128px;
+}
+#commands {
+	margin-bottom:30px;
+}
+ul {
+	list-style: disc;
+	margin-left: 20px; 
+}
+a {
+	color:#eeeeee;
+}
+#search-term {
+	width:200px;
+}
+
+#search-results h2 {
+	margin:10px 0 5px;
+	color: #999;
+	font-weight:bold;
+}
+#search-results .sp-player {
+	float:left;
+	margin-right:10px;
+}
+#search-results .add-playlist {
+	margin-top:20px;
+}
+#search-results .sp-list {
+	width:inherit;
+	max-height:inherit;
+}
+
+#title {
+    font-size:33px;
+    margin-left:20px;
+    margin-top:20px;
+    margin-bottom:20px;
+}
+
+#tagline {
+    margin-left:20px;
+    font-style: italic;
+}

@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>Playlist Pathfinder</title>
+		<link rel="stylesheet" href="sp://import/css/adam.css">
+	    <link rel="stylesheet" href="sp://import/css/api.css">
+		<link rel="stylesheet" href="css/styles.css">
+	    <script type="text/javascript" src="js/jquery.min.js"></script>
+	</head>
+<body>
+
+    <img align='left' src='frog.png'>
+    <div id="psearch">
+        <div id='title'>Boil the Frog</div>
+        <div id='tagline'> Create a playlist between any two artists to boil the musical frog</div>
+        <div id='artists'>
+            Starting&nbsp;artist:&nbsp;<input type="text" class='inp' id="source" value="Miley Cyrus" onkeydown="if (event.keyCode == 13) freshPath()">
+            &nbsp;End:&nbsp;<input type="text" id="dest" class ='inp' value="Miles Davis" onkeydown="if (event.keyCode == 13) freshPath()">
+            <button type="button"  onClick='freshPath()'>  Go </button>
+        </div>
+        <div id="info"> </div>
+    </div>
+    <br clear='both'>
+    <div id="search"> <div id="search-results"></div> </div>
+
+<script>
+
+// Initialize the Spotify objects
+var sp = getSpotifyApi(1),
+	models = sp.require("sp://import/scripts/api/models"),
+	views = sp.require("sp://import/scripts/api/views");
+
+
+jQuery.ajaxSettings.traditional = true;  
+var tempPlaylist = new models.Playlist();
+var artists_cache = {};
+var skipList = [];
+var sp = getSpotifyApi(1);
+var currentTracks = [];
+var smap = {};
+
+
+function generatePath() {
+    var source = $("#source").val();
+    var dest = $("#dest").val();
+    fetchPath(source, dest, null);
+}
+
+function freshPath() {
+    skipList = [];
+    generatePath();
+}
+
+
+function bypassPlaylist() {
+    var np = sp.trackPlayer.getNowPlayingTrack();
+    if (np && np.track.uri in smap) {
+        skipList.push(smap[np.track.uri]);
+        generatePath();
+    }
+}
+
+
+function savePlaylist() {
+    var title = 'Path from ' + t2a(currentTracks[0]) + " to "  + t2a(currentTracks[currentTracks.length - 1]) + ' #boilthefrog';
+    var thePlaylist = new models.Playlist(title);
+    for (var i = 0; i < currentTracks.length; i++) {
+        thePlaylist.add(currentTracks[i]);
+    }
+}
+
+// thanks to Peter Watts for sussing this out
+
+function showPlaylist(tracks) {
+    $("#search-results").empty();
+    if(tracks.length) {
+        tempPlaylist = new models.Playlist();
+        /*
+        for (var i = 0; i < tracks.length; i++) {
+            tempPlaylist.add(tracks[i]);
+        }
+        */
+        $.each(tracks,function(index,track){
+                if (track.data && track.data.uri) {
+                    tempPlaylist.add(track);
+                }
+        }); 
+        var playlistArt = new views.Player();
+            playlistArt.track = tempPlaylist.get(0);
+            playlistArt.context = tempPlaylist;
+            $("#search-results").append(playlistArt.node);
+        var saveButton= $("<button>");
+        saveButton.attr('class', 'add-playlist button icon');
+        saveButton.text("Save Playlist");
+        saveButton.click(savePlaylist);
+        $("#search-results .sp-player").append(saveButton);
+
+        var skipButton= $("<button>");
+        skipButton.attr('class', 'add-playlist button icon');
+        skipButton.text("!");
+        skipButton.attr("title", "Bypass the currently playing artist");
+        
+        skipButton.click(bypassPlaylist);
+        $("#search-results .sp-player").append(skipButton);
+
+        var playlistList = new views.List(tempPlaylist);
+            //playlistList.node.classList.add("temporary");
+            $("#search-results").append(playlistList.node);
+    } else {
+        $("#search-results").append('<div>No tracks in results</div>');
+    }
+}
+
+function fetchPath(source, dest, skips) {
+    var url = "http://labs.echonest.com/ArtistGraphServer/find_path?callback=?";
+
+    $.getJSON(url, {start : source, end : dest, skips:skipList}, function(data) {
+            if (!data.path) {
+                $("#info").text("Can't find a path from  " + source + " to " + dest);
+            } else {
+                $("#info").text("From " + source + " to " + dest +  " in " + data.path.length + " steps");
+            }
+
+            currentTracks = [];
+            if (!data.path) {
+                showPlaylist(currentTracks);
+            } else {
+                for (var i = 0; i < data.path.length; i++) {
+                    var artist = data.path[i];
+                    if (! (artist.id in artists_cache)) {
+                        artists_cache[artist.id] = artist;
+                    } else {
+                        artist = artists_cache[artist.id];
+                    }
+
+                    if (!artist.tracks) {
+                        fetchTopSpotifyTracks(i, artist, data.path.length);
+                    } else {
+                        addRandomTrack(i, artist, data.path.length);
+                    }
+                }
+            }
+        }
+    );
+}
+
+
+function addRandomTrack(index, artist, length) {
+    var track = randomChoice(artist.tracks);
+    if (track) {
+        smap[track.data.uri] = artist.id;
+    } else {
+        track = 'missing';
+    }
+    currentTracks[index] = track;
+    checkReady(length);
+}
+
+function checkReady(length) {
+    var count = 0;
+    for (var i = 0; i < length; i++) {
+        if (currentTracks[i]) {
+            count++;
+        }
+    }
+
+    if (count === length) {
+        showPlaylist(currentTracks);
+    }
+}
+
+function fetchTopSpotifyTracks(index, artist, length) {
+    var qname = artist.name.replace(/ /g, '+');
+    var search = new models.Search('artist:' + qname);
+    search.pageSize= 1;
+    search.searchAlbums = false;
+    search.searchTracks = true;
+    search.searchArtists = false;
+    search.searchPlaylists = false;
+    search.localResults = models.LOCALSEARCHRESULTS.IGNORE;
+
+    search.observe(models.EVENT.CHANGE, function() {
+        artist.tracks = search._tracks;
+        addRandomTrack(index, artist, length);
+    });
+    search.appendNext();
+}
+
+function t2a(track) {
+    return track.data.artists[0].name;
+}
+
+
+function randomChoice(arry) {
+    var idx = Math.floor(Math.random()* arry.length);
+    return arry[idx];
+}
+
+</script>
+</body>
+</html>
